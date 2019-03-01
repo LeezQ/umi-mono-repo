@@ -1,0 +1,87 @@
+import request from '@/utils/request';
+import { {{namespace}} } from './typings';
+
+{% for api in list -%}
+
+/** {{ api.desc }} */
+export async function {{ api.functionName }}(
+{%- if api.params %}
+  params
+  {%- if genType === "ts" -%}
+  : {
+    {# query 入参 -#}
+    {% if api.params.query -%}
+    {% for param in api.params.query -%}
+    {% if param.description -%}
+    /** {{ param.description }} */
+    {% endif -%}
+      {{ param.name }}
+      {{- "?" if not param.required }}
+      {{- (": " + param.type + ";") | safe }}
+    {% endfor -%}
+    {% endif -%}
+
+    {# header 入参 -#}
+    {% if api.params.header -%}
+    {% for param in api.params.header -%}
+    {% if param.description -%}
+    /** {{ param.description }} */
+    {% endif -%}
+      {{ param.name }}
+      {{- "?" if not param.required }}
+      {{- (": " + param.type + ";") | safe }}
+    {% endfor -%}
+    {% endif -%}
+
+    {# path 入参 -#}
+    {% if api.params.path -%}
+    {% for param in api.params.path -%}
+    {% if param.description -%}
+    /** {{ param.description }} */
+    {% endif -%}
+      {{ param.name }}
+      {{- "?" if not param.required }}
+      {{- (": " + param.type + ";") | safe }}
+    {% endfor -%}
+    {% endif -%}
+  }
+  {%- endif -%}
+  {{ "," if api.body }}
+{%- endif -%}
+{%- if api.body %}
+  body
+  {%- if genType === "ts" -%}
+  : {% if api.body.propertiesList %}{
+    {%- for prop in api.body.propertiesList %}
+    {% if prop.schema.description -%}
+    /** {{ prop.schema.description }} */
+    {% endif -%}
+    {{ prop.key }}{{ "?" if not prop.schema.requird }}: {{ prop.schema.type }},
+    {%- endfor %}
+  }
+  {%- else -%}
+  {{ api.body.type }}
+  {%- endif -%}
+  {%- endif -%}
+{%- endif %}
+){{ (": Promise<" + api.response.type + ">") | safe if genType === "ts" }} {
+  {% if api.params and api.params.path -%}
+  const { {% for param in api.params.path %}{{ param.name }}, {% endfor %} } = params;
+  {% endif -%}
+  return request(`{{ api.path | safe }}`, {
+    method: `{{ api.method | upper }}`,
+    {%- if api.params %}
+    params,
+    {%- endif %}
+    {%- if api.body %}
+    body,
+    {%- endif %}
+    {%- if api.method | upper !== 'GET' %}
+    headers: {
+      'Content-Type': '{{ api.body.mediaType | safe if api.body.mediaType else "application/x-www-form-urlencoded" | safe }}',
+    },
+    {%- endif %}
+  });
+}
+
+{% endfor -%}
